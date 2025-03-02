@@ -557,6 +557,8 @@ fun ProductDetailScreen(viewModel: ProductViewModel, productId: String, navContr
                     Text("Add $quantity to Cart", color = Color.White, fontSize = 16.sp)
                 }
             }
+
+
         } else {
             Column(
                 modifier = Modifier
