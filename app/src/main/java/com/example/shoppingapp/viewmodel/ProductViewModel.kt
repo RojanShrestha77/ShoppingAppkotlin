@@ -53,24 +53,42 @@ class ProductViewModel : ViewModel() {
         }
     }
 
-    fun addToCart(product: Product) {
+    fun addToCart(product: Product, quantity: Int = 1) { // Updated to accept quantity
         val user = auth.currentUser
         if (user != null) {
             val currentCart = _cartItems.value?.toMutableList() ?: mutableListOf()
             val existingProduct = currentCart.find { it.id == product.id }
             if (existingProduct != null) {
-                existingProduct.quantity += 1
+                existingProduct.quantity += quantity
                 Log.d("Cart", "Updated ${existingProduct.name} to quantity ${existingProduct.quantity}")
             } else {
-                currentCart.add(product.copy(quantity = 1))
-                Log.d("Cart", "Added ${product.name} with quantity 1")
+                currentCart.add(product.copy(quantity = quantity))
+                Log.d("Cart", "Added ${product.name} with quantity $quantity")
             }
             _cartItems.value = currentCart
             db.collection("users").document(user.uid).collection("cart")
                 .document(product.id)
-                .set(product.copy(quantity = currentCart.find { it.id == product.id }?.quantity ?: 1))
+                .set(product.copy(quantity = currentCart.find { it.id == product.id }?.quantity ?: quantity))
         } else {
             Log.w("Cart", "No user logged in, cannot add to cart")
+        }
+    }
+
+    fun removeFromCart(productId: String) { // New function to remove item
+        val user = auth.currentUser
+        if (user != null) {
+            val currentCart = _cartItems.value?.toMutableList() ?: mutableListOf()
+            currentCart.removeAll { it.id == productId }
+            _cartItems.value = currentCart
+            db.collection("users").document(user.uid).collection("cart")
+                .document(productId)
+                .delete()
+                .addOnSuccessListener {
+                    Log.d("Cart", "Removed item with ID $productId from cart")
+                }
+                .addOnFailureListener { e ->
+                    Log.w("Cart", "Error removing item: $e")
+                }
         }
     }
 

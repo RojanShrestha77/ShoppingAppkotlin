@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -293,7 +294,7 @@ fun ProductScreen(
     cartCount: Int,
     onCartClick: () -> Unit,
     onLogout: () -> Unit,
-    onProductClick: (String) -> Unit // Added callback for product click
+    onProductClick: (String) -> Unit
 ) {
     val products by viewModel.products.observeAsState(initial = emptyList())
     var searchQuery by remember { mutableStateOf("") }
@@ -385,7 +386,7 @@ fun ProductScreen(
                 ProductItem(
                     product = product,
                     onAddToCart = { viewModel.addToCart(product) },
-                    onClick = { onProductClick(product.id) } // Navigate to details
+                    onClick = { onProductClick(product.id) }
                 )
             }
         }
@@ -397,6 +398,7 @@ fun ProductScreen(
 fun ProductDetailScreen(viewModel: ProductViewModel, productId: String, navController: NavController) {
     val products by viewModel.products.observeAsState(initial = emptyList())
     val product = products.find { it.id == productId }
+    var quantity by remember { mutableStateOf(1) } // State for quantity selection
 
     Scaffold(
         topBar = {
@@ -448,16 +450,40 @@ fun ProductDetailScreen(viewModel: ProductViewModel, productId: String, navContr
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.Gray
                 )
-                // Add more details here if Product class is extended
+                // Quantity Selector
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { if (quantity > 1) quantity-- },
+                        modifier = Modifier.size(40.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("-", color = Color.White, fontSize = 18.sp)
+                    }
+                    Text(
+                        text = "$quantity",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Button(
+                        onClick = { quantity++ },
+                        modifier = Modifier.size(40.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("+", color = Color.White, fontSize = 18.sp)
+                    }
+                }
                 Button(
-                    onClick = { viewModel.addToCart(product) },
+                    onClick = { viewModel.addToCart(product, quantity) }, // Updated to use quantity
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Add to Cart", color = Color.White, fontSize = 16.sp)
+                    Text("Add $quantity to Cart", color = Color.White, fontSize = 16.sp)
                 }
             }
         } else {
@@ -515,7 +541,10 @@ fun CartScreen(viewModel: ProductViewModel, navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(cartItems) { item ->
-                    CartItem(item)
+                    CartItem(
+                        product = item,
+                        onRemove = { viewModel.removeFromCart(item.id) } // Added remove functionality
+                    )
                 }
                 item {
                     val total = cartItems.sumOf { it.price * it.quantity }
@@ -553,7 +582,7 @@ fun ProductItem(product: Product, onAddToCart: () -> Unit, onClick: () -> Unit) 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }, // Navigate to details on card click
+            .clickable { onClick() },
         elevation = CardDefaults.cardElevation(6.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -602,7 +631,7 @@ fun ProductItem(product: Product, onAddToCart: () -> Unit, onClick: () -> Unit) 
 }
 
 @Composable
-fun CartItem(product: Product) {
+fun CartItem(product: Product, onRemove: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp),
@@ -634,6 +663,13 @@ fun CartItem(product: Product) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray,
                     fontSize = 16.sp
+                )
+            }
+            IconButton(onClick = onRemove) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Remove from cart",
+                    tint = MaterialTheme.colorScheme.error
                 )
             }
         }
