@@ -791,6 +791,7 @@ fun CartItem(product: Product, onRemove: () -> Unit) {
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Remove from cart",
                     tint = MaterialTheme.colorScheme.error
+
                 )
             }
         }
