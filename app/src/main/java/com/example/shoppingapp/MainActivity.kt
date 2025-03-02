@@ -326,12 +326,83 @@ fun ProductScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "ShopNow",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    if (isSearchActive) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth(0.9f)
+                                .padding(8.dp)
+                        ) {
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.White, RoundedCornerShape(8.dp))
+                                    .padding(8.dp),
+                                textStyle = LocalTextStyle.current.copy(color = Color.Black),
+                                decorationBox = { innerTextField ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (searchQuery.isEmpty()) {
+                                            Text("Search products...", color = Color.Gray)
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            // Price Range Slider
+                            Text("Price Range: $${minPrice.toInt()} - $${maxPrice.toInt()}")
+                            Slider(
+                                value = minPrice,
+                                onValueChange = { minPrice = it },
+                                valueRange = 0f..maxPrice,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Slider(
+                                value = maxPrice,
+                                onValueChange = { maxPrice = it },
+                                valueRange = minPrice..1000f, // Adjust max as needed
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            // Category Dropdown
+                            ExposedDropdownMenuBox(
+                                expanded = isCategoryExpanded,
+                                onExpandedChange = { isCategoryExpanded = !isCategoryExpanded }
+                            ) {
+                                OutlinedTextField(
+                                    value = if (selectedCategory.isEmpty()) "All Categories" else selectedCategory,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Category") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCategoryExpanded) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = isCategoryExpanded,
+                                    onDismissRequest = { isCategoryExpanded = false }
+                                ) {
+                                    categories.forEach { category ->
+                                        DropdownMenuItem(
+                                            text = { Text(if (category.isEmpty()) "All Categories" else category) },
+                                            onClick = {
+                                                selectedCategory = category
+                                                isCategoryExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            "ShopNow",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 },
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -375,106 +446,20 @@ fun ProductScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Column(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
             modifier = Modifier
                 .padding(paddingValues)
-                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Search and Filter UI
-            if (isSearchActive) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .background(Color.White, RoundedCornerShape(8.dp))
-                ) {
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        textStyle = LocalTextStyle.current.copy(color = Color.Black),
-                        decorationBox = { innerTextField ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (searchQuery.isEmpty()) {
-                                    Text("Search products...", color = Color.Gray)
-                                }
-                                innerTextField()
-                            }
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Price Range: $${minPrice.toInt()} - $${maxPrice.toInt()}",
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    Slider(
-                        value = minPrice,
-                        onValueChange = { minPrice = it },
-                        valueRange = 0f..maxPrice,
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .fillMaxWidth()
-                    )
-                    Slider(
-                        value = maxPrice,
-                        onValueChange = { maxPrice = it },
-                        valueRange = minPrice..1000f, // Adjust max as needed
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ExposedDropdownMenuBox(
-                        expanded = isCategoryExpanded,
-                        onExpandedChange = { isCategoryExpanded = !isCategoryExpanded },
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = if (selectedCategory.isEmpty()) "All Categories" else selectedCategory,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Category") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCategoryExpanded) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = isCategoryExpanded,
-                            onDismissRequest = { isCategoryExpanded = false }
-                        ) {
-                            categories.forEach { category ->
-                                DropdownMenuItem(
-                                    text = { Text(if (category.isEmpty()) "All Categories" else category) },
-                                    onClick = {
-                                        selectedCategory = category
-                                        isCategoryExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            // Product Grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp, vertical = if (isSearchActive) 0.dp else 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(filteredProducts) { product ->
-                    ProductItem(
-                        product = product,
-                        onAddToCart = { viewModel.addToCart(product) },
-                        onClick = { onProductClick(product.id) }
-                    )
-                }
+            items(filteredProducts) { product ->
+                ProductItem(
+                    product = product,
+                    onAddToCart = { viewModel.addToCart(product) },
+                    onClick = { onProductClick(product.id) }
+                )
             }
         }
     }
