@@ -705,6 +705,8 @@ fun CartItem(product: Product, onRemove: () -> Unit) {
                 )
             }
 
+
+
             IconButton(onClick = onRemove) {
                 Icon(
                     imageVector = Icons.Default.Delete,
