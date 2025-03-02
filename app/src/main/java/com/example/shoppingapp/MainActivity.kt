@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -38,6 +39,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -309,9 +311,12 @@ fun ProductScreen(
     var maxPrice by remember { mutableStateOf(1000f) } // Adjust max based on your data
     var selectedCategory by remember { mutableStateOf("") }
     var isCategoryExpanded by remember { mutableStateOf(false) }
+    var sortOption by remember { mutableStateOf("Name A-Z") } // Default sort option
+    var isSortExpanded by remember { mutableStateOf(false) }
 
-    // Hardcoded categories; could be fetched from Firestore
+    // Hardcoded categories and sort options
     val categories = listOf("", "Electronics", "Clothing", "Books", "Home") // "" means "All"
+    val sortOptions = listOf("Name A-Z", "Name Z-A", "Price Low-High", "Price High-Low")
 
     // Filter products by name, price range, and category
     val filteredProducts = products.filter { product ->
@@ -320,7 +325,16 @@ fun ProductScreen(
         val matchesCategory = selectedCategory.isEmpty() || product.category == selectedCategory
         matchesName && matchesPrice && matchesCategory
     }
-    Log.d("ProductScreen", "Products loaded: ${products.size}, Filtered: ${filteredProducts.size}")
+
+    // Sort filtered products based on selected sort option
+    val sortedProducts = when (sortOption) {
+        "Name A-Z" -> filteredProducts.sortedBy { it.name }
+        "Name Z-A" -> filteredProducts.sortedByDescending { it.name }
+        "Price Low-High" -> filteredProducts.sortedBy { it.price }
+        "Price High-Low" -> filteredProducts.sortedByDescending { it.price }
+        else -> filteredProducts
+    }
+    Log.d("ProductScreen", "Products loaded: ${products.size}, Filtered: ${filteredProducts.size}, Sorted: ${sortedProducts.size}")
 
     Scaffold(
         topBar = {
@@ -349,6 +363,27 @@ fun ProductScreen(
                                 contentDescription = if (isSearchActive) "Close" else "Search",
                                 tint = Color.White
                             )
+                        }
+                        IconButton(onClick = { isSortExpanded = !isSortExpanded }) {
+                            Icon(
+                                Icons.Default.Sort,
+                                contentDescription = "Sort",
+                                tint = Color.White
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = isSortExpanded,
+                            onDismissRequest = { isSortExpanded = false }
+                        ) {
+                            sortOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        sortOption = option
+                                        isSortExpanded = false
+                                    }
+                                )
+                            }
                         }
                         if (!isSearchActive) {
                             BadgedBox(
@@ -468,7 +503,7 @@ fun ProductScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(filteredProducts) { product ->
+                items(sortedProducts) { product -> // Use sortedProducts instead of filteredProducts
                     ProductItem(
                         product = product,
                         onAddToCart = { viewModel.addToCart(product) },
