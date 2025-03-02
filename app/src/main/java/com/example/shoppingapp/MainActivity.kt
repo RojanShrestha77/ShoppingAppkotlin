@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -45,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.lightColorScheme
@@ -299,6 +301,8 @@ fun ProductScreen(
     val products by viewModel.products.observeAsState(initial = emptyList())
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
+
+    // Basic name search filtering
     val filteredProducts = if (searchQuery.isEmpty()) {
         products
     } else {
@@ -398,7 +402,7 @@ fun ProductScreen(
 fun ProductDetailScreen(viewModel: ProductViewModel, productId: String, navController: NavController) {
     val products by viewModel.products.observeAsState(initial = emptyList())
     val product = products.find { it.id == productId }
-    var quantity by remember { mutableStateOf(1) } // State for quantity selection
+    var quantity by remember { mutableStateOf(1) }
 
     Scaffold(
         topBar = {
@@ -450,7 +454,6 @@ fun ProductDetailScreen(viewModel: ProductViewModel, productId: String, navContr
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.Gray
                 )
-                // Quantity Selector
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -476,7 +479,7 @@ fun ProductDetailScreen(viewModel: ProductViewModel, productId: String, navContr
                     }
                 }
                 Button(
-                    onClick = { viewModel.addToCart(product, quantity) }, // Updated to use quantity
+                    onClick = { viewModel.addToCart(product, quantity) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -504,6 +507,7 @@ fun ProductDetailScreen(viewModel: ProductViewModel, productId: String, navContr
 @Composable
 fun CartScreen(viewModel: ProductViewModel, navController: NavController) {
     val cartItems by viewModel.cartItems.observeAsState(initial = emptyList())
+    var showDialog by remember { mutableStateOf(false) }
     Log.d("CartScreen", "Cart items: ${cartItems.size}, Contents: ${cartItems.joinToString { "${it.name} x ${it.quantity}" }}")
 
     Scaffold(
@@ -543,7 +547,7 @@ fun CartScreen(viewModel: ProductViewModel, navController: NavController) {
                 items(cartItems) { item ->
                     CartItem(
                         product = item,
-                        onRemove = { viewModel.removeFromCart(item.id) } // Added remove functionality
+                        onRemove = { viewModel.removeFromCart(item.id) }
                     )
                 }
                 item {
@@ -564,14 +568,49 @@ fun CartScreen(viewModel: ProductViewModel, navController: NavController) {
             Button(
                 onClick = {
                     Log.d("CartScreen", "Buy button clicked")
-                    viewModel.buyCart()
-                    navController.popBackStack()
+                    showDialog = true // Show confirmation dialog
                 },
                 modifier = Modifier.align(Alignment.End),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text("Buy", color = Color.White, fontSize = 16.sp)
+            }
+
+            // Order Confirmation Dialog
+            if (showDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDialog = false },
+                    title = { Text("Confirm Order") },
+                    text = {
+                        Column {
+                            Text("Are you sure you want to place this order?")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Items:", fontWeight = FontWeight.Bold)
+                            cartItems.forEach { item ->
+                                Text("${item.name} x ${item.quantity} - $${item.price * item.quantity}")
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Total: $${cartItems.sumOf { it.price * it.quantity }}", fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.buyCart()
+                                showDialog = false
+                                navController.popBackStack()
+                            }
+                        ) {
+                            Text("Confirm", color = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDialog = false }) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                )
             }
         }
     }
