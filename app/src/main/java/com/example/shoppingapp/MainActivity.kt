@@ -76,6 +76,7 @@ import com.example.shoppingapp.model.Product
 import com.example.shoppingapp.viewmodel.ProductViewModel
 import com.google.firebase.auth.FirebaseAuth
 
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
