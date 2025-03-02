@@ -38,13 +38,17 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -301,12 +305,20 @@ fun ProductScreen(
     val products by viewModel.products.observeAsState(initial = emptyList())
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
+    var minPrice by remember { mutableStateOf(0f) }
+    var maxPrice by remember { mutableStateOf(1000f) } // Adjust max based on your data
+    var selectedCategory by remember { mutableStateOf("") }
+    var isCategoryExpanded by remember { mutableStateOf(false) }
 
-    // Basic name search filtering
-    val filteredProducts = if (searchQuery.isEmpty()) {
-        products
-    } else {
-        products.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    // Hardcoded categories; could be fetched from Firestore
+    val categories = listOf("", "Electronics", "Clothing", "Books", "Home") // "" means "All"
+
+    // Filter products by name, price range, and category
+    val filteredProducts = products.filter { product ->
+        val matchesName = product.name.contains(searchQuery, ignoreCase = true)
+        val matchesPrice = product.price in minPrice..maxPrice
+        val matchesCategory = selectedCategory.isEmpty() || product.category == selectedCategory
+        matchesName && matchesPrice && matchesCategory
     }
     Log.d("ProductScreen", "Products loaded: ${products.size}, Filtered: ${filteredProducts.size}")
 
@@ -315,23 +327,74 @@ fun ProductScreen(
             TopAppBar(
                 title = {
                     if (isSearchActive) {
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth(0.8f)
-                                .background(Color.White, RoundedCornerShape(8.dp))
-                                .padding(8.dp),
-                            textStyle = LocalTextStyle.current.copy(color = Color.Black),
-                            decorationBox = { innerTextField ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (searchQuery.isEmpty()) {
-                                        Text("Search products...", color = Color.Gray)
+                                .fillMaxWidth(0.9f)
+                                .padding(8.dp)
+                        ) {
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.White, RoundedCornerShape(8.dp))
+                                    .padding(8.dp),
+                                textStyle = LocalTextStyle.current.copy(color = Color.Black),
+                                decorationBox = { innerTextField ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (searchQuery.isEmpty()) {
+                                            Text("Search products...", color = Color.Gray)
+                                        }
+                                        innerTextField()
                                     }
-                                    innerTextField()
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            // Price Range Slider
+                            Text("Price Range: $${minPrice.toInt()} - $${maxPrice.toInt()}")
+                            Slider(
+                                value = minPrice,
+                                onValueChange = { minPrice = it },
+                                valueRange = 0f..maxPrice,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Slider(
+                                value = maxPrice,
+                                onValueChange = { maxPrice = it },
+                                valueRange = minPrice..1000f, // Adjust max as needed
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            // Category Dropdown
+                            ExposedDropdownMenuBox(
+                                expanded = isCategoryExpanded,
+                                onExpandedChange = { isCategoryExpanded = !isCategoryExpanded }
+                            ) {
+                                OutlinedTextField(
+                                    value = if (selectedCategory.isEmpty()) "All Categories" else selectedCategory,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Category") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCategoryExpanded) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = isCategoryExpanded,
+                                    onDismissRequest = { isCategoryExpanded = false }
+                                ) {
+                                    categories.forEach { category ->
+                                        DropdownMenuItem(
+                                            text = { Text(if (category.isEmpty()) "All Categories" else category) },
+                                            onClick = {
+                                                selectedCategory = category
+                                                isCategoryExpanded = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
-                        )
+                        }
                     } else {
                         Text(
                             "ShopNow",
@@ -345,7 +408,12 @@ fun ProductScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = {
                             isSearchActive = !isSearchActive
-                            if (!isSearchActive) searchQuery = ""
+                            if (!isSearchActive) {
+                                searchQuery = ""
+                                minPrice = 0f
+                                maxPrice = 1000f
+                                selectedCategory = ""
+                            }
                         }) {
                             Icon(
                                 if (isSearchActive) Icons.Default.Clear else Icons.Default.Search,
@@ -568,7 +636,7 @@ fun CartScreen(viewModel: ProductViewModel, navController: NavController) {
             Button(
                 onClick = {
                     Log.d("CartScreen", "Buy button clicked")
-                    showDialog = true // Show confirmation dialog
+                    showDialog = true
                 },
                 modifier = Modifier.align(Alignment.End),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
@@ -577,7 +645,6 @@ fun CartScreen(viewModel: ProductViewModel, navController: NavController) {
                 Text("Buy", color = Color.White, fontSize = 16.sp)
             }
 
-            // Order Confirmation Dialog
             if (showDialog) {
                 AlertDialog(
                     onDismissRequest = { showDialog = false },
@@ -704,9 +771,6 @@ fun CartItem(product: Product, onRemove: () -> Unit) {
                     fontSize = 16.sp
                 )
             }
-
-
-
             IconButton(onClick = onRemove) {
                 Icon(
                     imageVector = Icons.Default.Delete,
