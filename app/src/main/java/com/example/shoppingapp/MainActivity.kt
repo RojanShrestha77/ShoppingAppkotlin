@@ -76,7 +76,6 @@ import com.example.shoppingapp.model.Product
 import com.example.shoppingapp.viewmodel.ProductViewModel
 import com.google.firebase.auth.FirebaseAuth
 
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -705,6 +704,7 @@ fun CartItem(product: Product, onRemove: () -> Unit) {
                     fontSize = 16.sp
                 )
             }
+
             IconButton(onClick = onRemove) {
                 Icon(
                     imageVector = Icons.Default.Delete,
